@@ -1,134 +1,125 @@
 # spec-graph
 
-**领域中立的规格驱动工作流编排内核**
+**Declaration engine — brain, not hands**
 
-[![npm version](https://img.shields.io/npm/v/@spec-graph/core.svg)](https://www.npmjs.com/package/@spec-graph/core)
+[![npm version](https://img.shields.io/npm/v/spec-graph.svg)](https://www.npmjs.com/package/spec-graph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
 ## 什么是 spec-graph？
 
-spec-graph 是一个 **规格驱动的工作流编排系统**，自动分析项目结构并生成定制化的治理工作流。它提供 6 个原语、8 阶段 FSM、38 个 CLI 命令，确保规格驱动的开发流程。
+spec-graph v3 是一个**声明引擎**（declaration engine）：
 
-## 核心特性
+```
+spec-graph 是大脑，不是双手
+─────────────────────────────
+✓ 生成 dispatch manifest（9-section envelope）
+✓ 评估产出物通过严格质量门
+✓ 追踪 9-stage FSM 状态
+✗ 永不直接调用 agent
+✗ 永不产生子进程
+✗ 永不写代码或文档
 
-- 🎯 **6 个原语**: Work-unit, Artifact, Contract, Check, Gate, Trace-edge
-- 🔄 **8 阶段 FSM**: specify → design → plan → implement → review → test → accept → integrate
-- 🛠️ **38 个 CLI 命令**: 从初始化到归档的完整生命周期管理
-- 📦 **17 个 Packs**: 领域包（API、前端、后端、嵌入式、DDD）+ 意图包（feature、bugfix、refactor）
-- 🔍 **22 维度 Sense**: 自动项目分析（40+ 信号）
-- ✅ **质量门**: 7 个 gates + 23 个 checks，自动执行
-- 🔗 **追溯性**: 双向需求跟踪 + 影响分析
-- 🏗️ **Brownfield 支持**: 深度集成现有项目
-- 🤖 **AI Agent 就绪**: 为 Claude Code、Codex 等 AI agent 提供 dispatch manifests
-- 👥 **多 Agent 协作**: 会议协议、专家邀请、状态报告
+所有 agent 执行委托给外部协调者
+（Claude Code skills, CI/CD, 自定义编排器）
+```
+
+它管理一个 9 阶段状态机，为 sub-agent 生成 dispatch manifest，并通过严格质量门评估产出物。spec-graph 不执行任何实际操作 — 它是开发流程的"大脑"。
+
+## 架构
+
+```
+┌─────────────────────────────────────────────────┐
+│  Skills (SKILL.md)  ← AI agent 编排层          │
+│  packages/skills/    11 个 entry skills        │
+├─────────────────────────────────────────────────┤
+│  CLI (Node.js)       ← 人类/agent 接口          │
+│  packages/cli/       22 个原子命令             │
+├─────────────────────────────────────────────────┤
+│  Core (TypeScript)   ← 声明引擎                 │
+│  packages/core/      12 个模块                 │
+│  automator / planning / gate-enforcement       │
+│  dispatch / knowledge-base / composer / ...    │
+└─────────────────────────────────────────────────┘
+```
 
 ## 仓库
 
 | 仓库 | 说明 | 状态 |
 |------|------|------|
-| [core](./core) | 内核：6 原语 + FSM + 38 CLI + 17 packs | ✅ 稳定 |
-| [server](./server) | HTTP/WebSocket 服务器 | 🚧 开发中 |
-| [ui](./ui) | Web UI (React SPA) | 📋 计划中 |
+| [monorepo](https://github.com/spec-graph/monorepo) | 主仓库：git submodule 组织所有 package | ✅ |
+| [core](https://github.com/spec-graph/core) | 引擎：automator, gate-enforcement, dispatch, planning, knowledge-base | ✅ v3 |
+| [cli](https://github.com/spec-graph/cli) | CLI：dispatch manifest generator + gate evaluator | ✅ v3 |
+| [skills](https://github.com/spec-graph/skills) | 11 个 SKILL.md，用于 Claude Code 集成 | ✅ v3 |
+| [server](https://github.com/spec-graph/server) | HTTP/WebSocket 服务器 | 🚧 |
+| [ui](https://github.com/spec-graph/ui) | Web UI (React SPA) 实时仪表盘 | 📋 |
+
+## 核心能力
+
+- **9-Stage FSM**: specify → specs → design → tasks → implement → review → test → accept → integrate
+- **Strict Quality Gates**: 每个阶段 entry/exit criteria 自动评估
+- **Dispatch Manifests**: 9-section envelope JSON，供 sub-agent 消费
+- **Parallel Execution**: implement 阶段多 capability 并行调度
+- **Knowledge Base**: 内置方法论库，支持本地覆盖
+- **Progressive Recovery**: 4-level 重试策略，diagnosis-driven
+- **Session Persistence**: 基于文件的 state 持久化 (`.spec-graph/sessions/`)
+- **Meeting Runtime**: 多 agent 协作讨论管理
+- **Worktree Isolation**: 并行 sub-agent 的 git worktree 隔离
+- **Hook Integration**: PostToolUse hook 自动注入 system-reminder
 
 ## 快速开始
 
-### 安装
-
 ```bash
-# 全局安装（推荐）
-npm install -g @spec-graph/core
+# 全局安装 CLI
+npm install -g spec-graph
 
-# 或使用 npx（无需安装）
-npx @spec-graph/core --version
+# 初始化项目
+spec-graph init
 
-# 或添加到项目
-npm install --save-dev @spec-graph/core
+# 创建会话并确认计划
+spec-graph plan "Build JWT authentication" --fallback --confirm
+
+# 生成 dispatch manifest（外部协调者读取并调度 sub-agent）
+spec-graph dispatch --session <id> --json
+
+# 提交 agent 产出物进行 gate 评估
+spec-graph submit --session <id> --result '<json>'
+
+# 或使用 AI agent skill 自动化整个循环
+# /spec-graph-auto "Build JWT authentication"
 ```
 
-### 初始化项目
+## AI Agent 集成
 
-```bash
-# 一键初始化（推荐）
-spec-graph init --quick
+spec-graph 提供两层接口：
 
-# 或逐步执行
-spec-graph init --description "My awesome project"
-spec-graph compose
-spec-graph prime --bootstrap
-```
-
-### 查看状态
-
-```bash
-# 查看工作流状态
-spec-graph status
-
-# 查看富文本仪表盘
-spec-graph dashboard
-
-# 查看下一步
-spec-graph next
-```
-
-### 生成 AI Agent 调度清单
-
-```bash
-# 生成 dispatch manifest
-spec-graph dispatch --json
-
-# AI agent 读取并执行
-# ... agent 工作 ...
-
-# 重新调度
-spec-graph dispatch --json
-```
-
-## 使用场景
-
-- **Web 应用** - 前端 + 后端 + API 设计 packs
-- **微服务** - 多个 tracks + contract edges
-- **嵌入式系统** - 固件 + 硬件 packs
-- **数据管道** - 数据设计 + 迁移 packs
-- **重构** - refactor pack + scope policy
-- **性能优化** - performance pack + test layers
+1. **Skills**（Claude Code）：`/spec-graph-plan`, `/spec-graph-auto`, `/spec-graph-status`, `/spec-graph-intervene`
+2. **CLI**（任何 agent）：通过 shell 命令调用 `dispatch --json` / `submit --result`
 
 ## 与其他工具对比
 
-| 特性 | spec-graph | wdf | BMAD | spec-kit |
-|------|-----------|-----|------|----------|
-| 领域中立 | ✅ | ❌ (仅 Web) | ❌ | ⚠️ |
-| FSM 阶段 | 8 | 4 | ⚠️ | 4 |
-| 质量门 | 7 | 4 | ⚠️ | ⚠️ |
-| CLI 命令 | 38 | 25 | 48 skills | 15 |
-| Brownfield 支持 | ✅ (22D) | ⚠️ | ❌ | ❌ |
-| 追溯性 | ✅ | ✅ | ❌ | ⚠️ |
-| 多 Agent | ✅ | ❌ | ✅ | ❌ |
-| Constitution | ✅ | ✅ | ❌ | ✅ |
-
-**评分: 88/90** (16/18 维度 ⭐⭐⭐⭐⭐)
+| 特性 | spec-graph v3 | wdf | BMAD | spec-kit |
+|------|-------------|-----|------|----------|
+| 架构哲学 | brain-not-hands | executor | methodology | scaffolding |
+| FSM 阶段 | 9 | 4 | — | 4 |
+| 质量门 | 9 stage gates | 4 | — | — |
+| 并行执行 | ✅ wave-based | ❌ | ❌ | ❌ |
+| 多 Agent 协作 | ✅ meeting protocol | ❌ | ✅ | ❌ |
+| Brownfield 支持 | ✅ sense module | — | — | — |
+| Agent 无关 | ✅ Claude Code + Codex + CI | — | ✅ | — |
 
 ## 文档
 
-- [快速开始指南](https://github.com/spec-graph/core#quick-start)
-- [CLI 命令参考](https://github.com/spec-graph/core#commands)
-- [Pack 系统](https://github.com/spec-graph/core#pack-structure)
-- [AI Agent 集成](https://github.com/spec-graph/core#ai-agent-integration)
+- [架构文档](https://github.com/spec-graph/monorepo/blob/main/docs/ARCHITECTURE.md)
+- [Agent 集成指南](https://github.com/spec-graph/monorepo/blob/main/docs/agent-integration-guide.md)
+- [v3.0 迁移指南](https://github.com/spec-graph/monorepo/blob/main/docs/migration-3.0.md)
 
 ## 贡献
 
-欢迎贡献！请阅读各仓库的 CONTRIBUTING.md 了解开发指南。
-
-## 许可证
-
-MIT
+欢迎贡献！MIT 许可证。
 
 ## 链接
 
-- **npm**: https://www.npmjs.com/package/@spec-graph/core
-- **问题反馈**: https://github.com/spec-graph/core/issues
-- **讨论**: https://github.com/orgs/spec-graph/discussions
-
----
-
-**spec-graph** - 让规格驱动的开发变得简单、可追溯、可治理。
+- **npm**: https://www.npmjs.com/package/spec-graph
+- **Issues**: https://github.com/spec-graph/monorepo/issues
+- **Discussions**: https://github.com/orgs/spec-graph/discussions
